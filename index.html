@@ -39,8 +39,14 @@ video.mirror{transform:scaleX(-1)}
 .flash{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 .flash.go{animation:fl .22s}
 @keyframes fl{0%{opacity:1}100%{opacity:0}}
-.lenses{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:4px;max-width:94%;overflow-x:auto;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:999px;scrollbar-width:none}
-.lenses::-webkit-scrollbar{display:none}
+.dock{position:absolute;bottom:12px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.dock>*{pointer-events:auto}
+.lenses,.zooms{display:flex;gap:2px;padding:4px;max-width:94%;overflow-x:auto;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:999px;scrollbar-width:none}
+.lenses::-webkit-scrollbar,.zooms::-webkit-scrollbar{display:none}
+.focus{position:absolute;width:72px;height:72px;margin:-36px 0 0 -36px;border:1.5px solid var(--yellow);border-radius:6px;opacity:0;pointer-events:none}
+.focus.go{animation:fz 1s ease-out}
+@keyframes fz{0%{opacity:1;transform:scale(1.4)}15%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+@keyframes fz2{0%,80%{opacity:1}100%{opacity:0}}
 .lens{border:0;background:transparent;color:#fff;font-weight:600;font-size:13px;padding:8px 13px;border-radius:999px;white-space:nowrap}
 .lens.on{background:rgba(255,255,255,.22);color:var(--yellow)}
 .ctrl{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:20px 24px 16px}
@@ -54,7 +60,7 @@ video.mirror{transform:scaleX(-1)}
 .flip:active{background:rgba(255,255,255,.3)}
 .bar{height:6px;border-radius:3px;background:var(--card);overflow:hidden;margin-top:4px}
 .bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .3s}
-@media (prefers-reduced-motion:reduce){.flash.go{animation:none}.bar i{transition:none}}
+@media (prefers-reduced-motion:reduce){.flash.go{animation:none}.focus.go{animation:fz2 1s}.bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -77,7 +83,11 @@ video.mirror{transform:scaleX(-1)}
   <div class="finder">
     <video id="v" playsinline muted autoplay></video>
     <div class="flash" id="fl"></div>
-    <div class="lenses" id="lenses" role="group" aria-label="Pilih kamera"></div>
+    <div class="focus" id="focus"></div>
+    <div class="dock">
+      <div class="zooms" id="zooms" role="group" aria-label="Zoom"></div>
+      <div class="lenses" id="lenses" role="group" aria-label="Pilih kamera"></div>
+    </div>
   </div>
   <div class="ctrl">
     <div class="stat" id="stat"></div>
@@ -103,7 +113,7 @@ video.mirror{transform:scaleX(-1)}
 <script>
 // ====== PENGATURAN ======
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUuopoumlDQ2vT3uqQvDXiEnIywcxyMkb7YxYsv6mfToObC-KF2lFIkFBENywSxx9-/exec';
-const MAX_SHOTS = 24;
+const MAX_SHOTS = 4;
 // ========================
 
 const $ = id => document.getElementById(id);
@@ -155,18 +165,12 @@ async function openCam(deviceId, facing){
 
 async function loadLenses(){
   let devs = [];
-  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch(e) {}
-  const raw = devs.map(d => {
-    const l = (d.label || '').toLowerCase();
-    return { id: d.deviceId, l, front: /front|depan|user/.test(l), ultra: /ultra/.test(l), tele: /tele/.test(l), auto: /dual|triple/.test(l) };
-  });
-  const plain = raw.filter(x => !x.front && !x.ultra && !x.tele && !x.auto).length;
-  let n = 0;
-  raw.forEach(x => {
-    x.name = x.front ? 'Depan' : x.ultra ? 'Ultra Wide' : x.tele ? 'Tele' : x.auto ? 'Auto' : (plain > 1 ? 'Wide ' + (++n) : 'Wide');
-    x.order = x.front ? 0 : x.ultra ? 1 : x.tele ? 3 : 2;
-  });
-  lenses = raw.sort((a, b) => a.order - b.order);
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput' && d.deviceId); } catch(e) {}
+  const seen = new Set();
+  const raw = devs.filter(d => !seen.has(d.deviceId) && seen.add(d.deviceId))
+                  .map(d => ({ id: d.deviceId, front: /front|depan|user/i.test(d.label || '') }));
+  lenses = [...raw.filter(x => !x.front), ...raw.filter(x => x.front)];   // belakang dulu, depan terakhir
+  lenses.forEach((x, i) => x.name = String(i + 1));
 }
 
 function renderLenses(){
@@ -177,7 +181,36 @@ function renderLenses(){
     const b = document.createElement('button');
     b.className = 'lens' + (l.id === currentId ? ' on' : '');
     b.textContent = l.name;
+    b.setAttribute('aria-label', 'Kamera ' + l.name);
     b.onclick = () => switchTo(l.id);
+    box.appendChild(b);
+  });
+  setupZoom();
+}
+
+// Zoom: banyak HP Android menyatukan lensa ultra wide/tele ke dalam satu kamera yang bisa di-zoom
+function setupZoom(){
+  const box = $('zooms');
+  box.innerHTML = '';
+  const t = stream && stream.getVideoTracks()[0];
+  const caps = t && t.getCapabilities ? t.getCapabilities() : {};
+  if (!caps.zoom) { box.style.display = 'none'; return; }
+  const min = caps.zoom.min, max = caps.zoom.max;
+  let steps = [0.5, 1, 2, 3, 5, 10].filter(z => z >= min - 0.001 && z <= max + 0.001);
+  if (min < 0.95 && !steps.includes(0.5)) steps.unshift(Math.round(min * 10) / 10);
+  if (steps.length < 2) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  const cur = (t.getSettings().zoom) || 1;
+  const nearest = steps.reduce((a, b) => Math.abs(b - cur) < Math.abs(a - cur) ? b : a);
+  steps.forEach(z => {
+    const b = document.createElement('button');
+    b.className = 'lens' + (z === nearest ? ' on' : '');
+    b.textContent = String(z).replace('.', ',') + '×';
+    b.setAttribute('aria-label', 'Zoom ' + z + ' kali');
+    b.onclick = async () => {
+      try { await t.applyConstraints({ advanced: [{ zoom: z }] }); } catch(e) { return; }
+      box.querySelectorAll('.lens').forEach(x => x.classList.toggle('on', x === b));
+    };
     box.appendChild(b);
   });
 }
@@ -188,12 +221,10 @@ async function switchTo(id){
 
 $('flip').onclick = async () => {
   const cur = lenses.find(l => l.id === currentId);
-  if (lenses.length > 1) {
-    const target = cur && cur.front ? (lenses.find(l => !l.front && l.order === 2) || lenses.find(l => !l.front)) : lenses.find(l => l.front);
-    if (target) return switchTo(target.id);
-  }
-  const front = $('v').classList.contains('mirror');
-  try { await openCam(null, front ? 'environment' : 'user'); } catch(e) {}
+  const wantFront = !(cur && cur.front);
+  const target = lenses.find(l => l.front === wantFront);
+  if (target) return switchTo(target.id);
+  try { await openCam(null, wantFront ? 'user' : 'environment'); } catch(e) {}
 };
 
 $('start').onclick = async () => {
@@ -212,6 +243,25 @@ $('start').onclick = async () => {
   }
   show(taken >= MAX_SHOTS ? 'done' : 'cam');
 };
+
+// ---------- Tap untuk fokus ----------
+const finder = document.querySelector('.finder');
+finder.addEventListener('pointerdown', async e => {
+  if (e.target.closest('.dock')) return;
+  const r = finder.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  const ring = $('focus');
+  ring.style.left = px + 'px'; ring.style.top = py + 'px';
+  ring.classList.remove('go'); void ring.offsetWidth; ring.classList.add('go');
+  const v = $('v'), t = stream && stream.getVideoTracks()[0];
+  if (!t || !v.videoWidth) return;
+  const s = Math.max(r.width / v.videoWidth, r.height / v.videoHeight);   // object-fit: cover
+  let x = (px + (v.videoWidth * s - r.width) / 2) / (v.videoWidth * s);
+  const y = (py + (v.videoHeight * s - r.height) / 2) / (v.videoHeight * s);
+  if (v.classList.contains('mirror')) x = 1 - x;
+  try { await t.applyConstraints({ advanced: [{ pointsOfInterest: [{ x, y }], focusMode: 'single-shot' }] }); }
+  catch(err) { try { await t.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch(_) {} }
+});
 
 // ---------- Ambil & kirim foto ----------
 $('shot').onclick = () => {
