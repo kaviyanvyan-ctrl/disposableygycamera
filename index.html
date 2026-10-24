@@ -3,66 +3,107 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
 <title>Kamera Sekali Pakai</title>
 <style>
-:root{--bg:#1b1a17;--ink:#f2ead8;--dim:#9a917d;--accent:#f0b429;--body:#2a2824}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif}
-body{display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-.screen{display:none;flex:1;flex-direction:column;padding:20px}
+:root{--bg:#f2f2f7;--card:#fff;--label:#000;--sec:#6c6c70;--blue:#007aff;--yellow:#ffd60a}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--label:#fff;--sec:#98989f;--blue:#0a84ff}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+.screen{display:none;position:fixed;inset:0}
 .screen.on{display:flex}
-#welcome{justify-content:center;gap:16px;max-width:420px;margin:0 auto;width:100%}
-h1{font-family:Georgia,serif;font-size:2rem;margin:0;line-height:1.1}
-p{margin:0;color:var(--dim);line-height:1.5}
-input{font:inherit;padding:14px;border-radius:8px;border:2px solid var(--dim);background:var(--body);color:var(--ink)}
-input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.btn{font:inherit;font-weight:700;padding:14px;border:0;border-radius:8px;background:var(--accent);color:#1b1a17}
-#cam{padding:0;background:#000}
-.finder{position:relative;flex:1;overflow:hidden}
+button:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+/* Welcome & selesai */
+.center{align-items:center;justify-content:center;padding:24px}
+.wrap{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px;text-align:center}
+.icon{width:88px;height:88px;border-radius:22px;margin:0 auto 4px;display:grid;place-items:center;background:linear-gradient(160deg,#48484a,#1c1c1e);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+h1{font-size:34px;line-height:1.1;letter-spacing:-.02em;margin:0;font-weight:700}
+.sub{color:var(--sec);font-size:17px;line-height:1.4;margin:0}
+.group{background:var(--card);border-radius:12px;text-align:left;margin-top:8px}
+.group input{width:100%;border:0;background:transparent;color:var(--label);padding:15px 16px;font-size:17px;border-radius:12px}
+.group input::placeholder{color:var(--sec)}
+.primary{border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:16px;transition:opacity .15s}
+.primary:active{opacity:.7}
+.note{color:var(--sec);font-size:13px;margin:0;min-height:1.4em}
+.err{color:#ff453a}
+
+/* Kamera */
+#cam{flex-direction:column;background:#000;color:#fff;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.top{display:flex;justify-content:center;padding:10px 16px}
+.count{background:var(--yellow);color:#000;font-weight:600;font-size:15px;border-radius:999px;padding:4px 14px;font-variant-numeric:tabular-nums}
+.finder{flex:1;position:relative;margin:0 6px;border-radius:24px;overflow:hidden;background:#111}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.bar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:var(--body)}
-.count{font-family:"Courier New",monospace;font-size:2.2rem;color:var(--accent);min-width:3ch}
-.count small{display:block;font-size:.7rem;color:var(--dim)}
-.shutter{width:76px;height:76px;border-radius:50%;border:6px solid var(--ink);background:var(--accent);transition:transform .08s}
-.shutter:active{transform:scale(.92)}
-.shutter:disabled{background:var(--dim);opacity:.5}
-.status{font-size:.8rem;color:var(--dim);min-width:6ch;text-align:right}
-.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
-.flash.go{animation:fl .18s}
-@keyframes fl{from{opacity:.9}to{opacity:0}}
-@media (prefers-reduced-motion:reduce){.flash.go{animation:none}}
-#done{justify-content:center;text-align:center;gap:12px}
+video.mirror{transform:scaleX(-1)}
+.flash{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.flash.go{animation:fl .22s}
+@keyframes fl{0%{opacity:1}100%{opacity:0}}
+.lenses{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:4px;max-width:94%;overflow-x:auto;background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:999px;scrollbar-width:none}
+.lenses::-webkit-scrollbar{display:none}
+.lens{border:0;background:transparent;color:#fff;font-weight:600;font-size:13px;padding:8px 13px;border-radius:999px;white-space:nowrap}
+.lens.on{background:rgba(255,255,255,.22);color:var(--yellow)}
+.ctrl{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:20px 24px 16px}
+.stat{font-size:13px;color:#aeaeb2;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat b{display:block;color:#fff;font-size:15px;font-weight:600}
+.shutter{width:80px;height:80px;border-radius:50%;border:4px solid #fff;background:transparent;padding:0;position:relative}
+.shutter::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff;transition:transform .1s}
+.shutter:active::after{transform:scale(.88)}
+.shutter:disabled{opacity:.35}
+.flip{justify-self:end;width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center}
+.flip:active{background:rgba(255,255,255,.3)}
+.bar{height:6px;border-radius:3px;background:var(--card);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .3s}
+@media (prefers-reduced-motion:reduce){.flash.go{animation:none}.bar i{transition:none}}
 </style>
 </head>
 <body>
 
-<section class="screen on" id="welcome">
-  <h1>Kamera sekali pakai</h1>
-  <p>Kamu punya <span id="maxLabel"></span> jepretan. Tidak ada pratinjau, jadi hasilnya kejutan. Semua foto langsung masuk ke album acara.</p>
-  <input id="name" placeholder="Nama kamu" autocomplete="name" maxlength="30">
-  <button class="btn" id="start">Mulai memotret</button>
-  <p id="err" role="alert"></p>
-</section>
-
-<section class="screen" id="cam">
-  <div class="finder"><video id="v" playsinline muted autoplay></video><div class="flash" id="fl"></div></div>
-  <div class="bar">
-    <div class="count"><span id="left">24</span><small>sisa foto</small></div>
-    <button class="shutter" id="shot" aria-label="Ambil foto"></button>
-    <div class="status" id="status"></div>
+<section class="screen center on" id="welcome">
+  <div class="wrap">
+    <div class="icon" aria-hidden="true">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>
+    </div>
+    <h1>Kamera sekali pakai</h1>
+    <p class="sub">Kamu punya <span id="maxLabel"></span> jepretan. Tanpa pratinjau, jadi hasilnya kejutan. Tiap foto langsung terkirim ke album acara.</p>
+    <div class="group"><input id="name" placeholder="Nama kamu" autocomplete="name" maxlength="30"></div>
+    <button class="primary" id="start">Mulai memotret</button>
+    <p class="note err" id="err" role="alert"></p>
   </div>
 </section>
 
-<section class="screen" id="done">
-  <h1>Film habis</h1>
-  <p>Terima kasih, <span id="who"></span>! Foto kamu sedang dikirim ke album acara. Tunggu sampai semuanya terkirim sebelum menutup halaman ini.</p>
-  <p id="pending"></p>
+<section class="screen" id="cam">
+  <div class="top"><div class="count" id="left">24</div></div>
+  <div class="finder">
+    <video id="v" playsinline muted autoplay></video>
+    <div class="flash" id="fl"></div>
+    <div class="lenses" id="lenses" role="group" aria-label="Pilih kamera"></div>
+  </div>
+  <div class="ctrl">
+    <div class="stat" id="stat"></div>
+    <button class="shutter" id="shot" aria-label="Ambil foto"></button>
+    <button class="flip" id="flip" aria-label="Balik kamera depan atau belakang">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8a8 8 0 0 0-14-2L4 8"/><path d="M4 3v5h5"/><path d="M4 16a8 8 0 0 0 14 2l2-2"/><path d="M20 21v-5h-5"/></svg>
+    </button>
+  </div>
+</section>
+
+<section class="screen center" id="done">
+  <div class="wrap">
+    <div class="icon" aria-hidden="true" style="background:linear-gradient(160deg,#30d158,#248a3d)">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </div>
+    <h1>Film habis</h1>
+    <p class="sub">Terima kasih, <span id="who"></span>! Jatah fotomu sudah terpakai.</p>
+    <div class="bar"><i id="barfill"></i></div>
+    <p class="note" id="pending"></p>
+  </div>
 </section>
 
 <script>
 // ====== PENGATURAN ======
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfM6LM-A_ZcNZYvOHtelUdQ5P5c2RGsmgiSgo0O_qsGFBoJ1mJqLDSE81GATVeS3Kd/exec';
-const MAX_SHOTS = 5;
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUuopoumlDQ2vT3uqQvDXiEnIywcxyMkb7YxYsv6mfToObC-KF2lFIkFBENywSxx9-/exec';
+const MAX_SHOTS = 24;
 // ========================
 
 const $ = id => document.getElementById(id);
@@ -70,75 +111,144 @@ const store = {
   get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
   set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} }
 };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 let name = store.get('dc_name') || '';
 let taken = parseInt(store.get('dc_taken') || '0', 10);
-let queue = [], sending = false, stream;
+let sent = Math.min(parseInt(store.get('dc_sent') || '0', 10), taken);
+let queue = [], active = 0, stream, lenses = [], currentId = null;
 
 $('maxLabel').textContent = MAX_SHOTS;
 $('name').value = name;
-if (taken >= MAX_SHOTS) show('done'), $('who').textContent = name || 'teman';
+$('who').textContent = name || 'teman';
+if (taken >= MAX_SHOTS) show('done');
 
 function show(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  ui();
 }
-function updateUI(){
+function ui(){
+  const inFlight = queue.length + active;
   $('left').textContent = Math.max(MAX_SHOTS - taken, 0);
   $('shot').disabled = taken >= MAX_SHOTS;
-  const n = queue.length + (sending ? 1 : 0);
-  $('status').textContent = n ? 'kirim ' + n : '';
-  $('pending').textContent = n ? n + ' foto masih dikirim…' : (taken >= MAX_SHOTS ? 'Semua foto sudah terkirim.' : '');
+  $('stat').innerHTML = '<b>' + sent + '/' + taken + '</b>' + (inFlight ? 'mengirim…' : 'terkirim');
+  $('barfill').style.width = (taken ? sent / taken * 100 : 0) + '%';
+  $('pending').textContent = sent >= taken && taken > 0 ? 'Semua foto sudah terkirim. Kamu boleh menutup halaman ini.' : 'Mengirim foto… jangan tutup halaman ini dulu.';
 }
+
+// ---------- Kamera ----------
+async function openCam(deviceId, facing){
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const video = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  if (deviceId) video.deviceId = { exact: deviceId };
+  else video.facingMode = { ideal: facing || 'environment' };
+  stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+  const v = $('v');
+  v.srcObject = stream;
+  try { await v.play(); } catch(e) {}
+  const s = stream.getVideoTracks()[0].getSettings();
+  currentId = s.deviceId || deviceId || null;
+  const info = lenses.find(l => l.id === currentId);
+  v.classList.toggle('mirror', s.facingMode === 'user' || !!(info && info.front));
+  renderLenses();
+}
+
+async function loadLenses(){
+  let devs = [];
+  try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch(e) {}
+  const raw = devs.map(d => {
+    const l = (d.label || '').toLowerCase();
+    return { id: d.deviceId, l, front: /front|depan|user/.test(l), ultra: /ultra/.test(l), tele: /tele/.test(l), auto: /dual|triple/.test(l) };
+  });
+  const plain = raw.filter(x => !x.front && !x.ultra && !x.tele && !x.auto).length;
+  let n = 0;
+  raw.forEach(x => {
+    x.name = x.front ? 'Depan' : x.ultra ? 'Ultra Wide' : x.tele ? 'Tele' : x.auto ? 'Auto' : (plain > 1 ? 'Wide ' + (++n) : 'Wide');
+    x.order = x.front ? 0 : x.ultra ? 1 : x.tele ? 3 : 2;
+  });
+  lenses = raw.sort((a, b) => a.order - b.order);
+}
+
+function renderLenses(){
+  const box = $('lenses');
+  box.innerHTML = '';
+  box.style.display = lenses.length > 1 ? 'flex' : 'none';
+  lenses.forEach(l => {
+    const b = document.createElement('button');
+    b.className = 'lens' + (l.id === currentId ? ' on' : '');
+    b.textContent = l.name;
+    b.onclick = () => switchTo(l.id);
+    box.appendChild(b);
+  });
+}
+
+async function switchTo(id){
+  try { await openCam(id); } catch(e) { $('stat').textContent = 'Kamera tidak bisa dibuka'; }
+}
+
+$('flip').onclick = async () => {
+  const cur = lenses.find(l => l.id === currentId);
+  if (lenses.length > 1) {
+    const target = cur && cur.front ? (lenses.find(l => !l.front && l.order === 2) || lenses.find(l => !l.front)) : lenses.find(l => l.front);
+    if (target) return switchTo(target.id);
+  }
+  const front = $('v').classList.contains('mirror');
+  try { await openCam(null, front ? 'environment' : 'user'); } catch(e) {}
+};
 
 $('start').onclick = async () => {
   name = $('name').value.trim();
-  if (!name) { $('err').textContent = 'Isi nama dulu supaya foto mudah dikenali.'; return; }
+  if (!name) { $('err').textContent = 'Isi nama dulu supaya fotomu mudah dikenali.'; return; }
   store.set('dc_name', name);
+  $('who').textContent = name;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1600 } }, audio: false });
+    await openCam(null, 'environment');
+    await loadLenses();       // label kamera baru tersedia setelah izin diberikan
+    currentId = stream.getVideoTracks()[0].getSettings().deviceId || currentId;
+    renderLenses();
   } catch (e) {
     $('err').textContent = 'Kamera tidak bisa dibuka. Izinkan akses kamera di browser, lalu coba lagi.';
     return;
   }
-  $('v').srcObject = stream;
   show(taken >= MAX_SHOTS ? 'done' : 'cam');
-  $('who').textContent = name;
-  updateUI();
 };
 
+// ---------- Ambil & kirim foto ----------
 $('shot').onclick = () => {
   if (taken >= MAX_SHOTS) return;
   const v = $('v');
   if (!v.videoWidth) return;
   const scale = Math.min(1, 1600 / Math.max(v.videoWidth, v.videoHeight));
   const c = document.createElement('canvas');
-  c.width = v.videoWidth * scale; c.height = v.videoHeight * scale;
+  c.width = Math.round(v.videoWidth * scale);
+  c.height = Math.round(v.videoHeight * scale);
   c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
   taken++;
   store.set('dc_taken', taken);
-  queue.push({ name, n: taken, image: c.toDataURL('image/jpeg', 0.8) });
+  queue.push({ name, n: taken, image: c.toDataURL('image/jpeg', 0.82) });
   const f = $('fl'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
-  if (navigator.vibrate) navigator.vibrate(30);
-  updateUI(); flush();
-  if (taken >= MAX_SHOTS) setTimeout(() => { show('done'); updateUI(); }, 400);
+  if (navigator.vibrate) navigator.vibrate(25);
+  pump();                      // kirim langsung, tanpa menunggu kuota habis
+  if (taken >= MAX_SHOTS) setTimeout(() => { if (stream) stream.getTracks().forEach(t => t.stop()); show('done'); }, 450);
 };
 
-async function flush(){
-  if (sending) return;
-  sending = true;
-  while (queue.length) {
-    const item = queue[0];
+async function upload(item){
+  for (let i = 0; ; i++) {
     try {
       await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(item) });
-      queue.shift();
-    } catch (e) {
-      await new Promise(r => setTimeout(r, 4000)); // koneksi putus, coba lagi
-    }
-    updateUI();
+      return;
+    } catch (e) { await sleep(Math.min(2000 * (i + 1), 10000)); }
   }
-  sending = false;
-  updateUI();
 }
-window.addEventListener('beforeunload', e => { if (queue.length || sending) { e.preventDefault(); e.returnValue = ''; } });
+function pump(){
+  while (active < 2 && queue.length) {
+    const item = queue.shift();
+    active++;
+    upload(item).then(() => { sent++; store.set('dc_sent', sent); }).finally(() => { active--; pump(); });
+  }
+  ui();
+}
+window.addEventListener('beforeunload', e => { if (queue.length || active) { e.preventDefault(); e.returnValue = ''; } });
 </script>
 </body>
 </html>
